@@ -39,6 +39,8 @@ Route::middleware('auth')->group(function () {
     Route::get('documents-bulk', [\App\Http\Controllers\DocumentController::class, 'bulkCreate'])->name('documents.bulk.create');
     Route::post('documents-bulk', [\App\Http\Controllers\DocumentController::class, 'bulkStore'])->name('documents.bulk.store');
     Route::post('documents/{document}/version', [\App\Http\Controllers\DocumentController::class, 'uploadVersion'])->name('documents.version.upload');
+    Route::post('documents/{document}/archive', [\App\Http\Controllers\DocumentController::class, 'markArchived'])->name('documents.archive');
+    Route::post('documents/{document}/unarchive', [\App\Http\Controllers\DocumentController::class, 'unarchive'])->name('documents.unarchive');
     Route::post('documents/{document}/lock', [\App\Http\Controllers\DocumentController::class, 'lock'])->name('documents.lock');
     Route::post('documents/{document}/unlock', [\App\Http\Controllers\DocumentController::class, 'unlock'])->name('documents.unlock');
     Route::post('documents/{document}/legal-hold', [\App\Http\Controllers\DocumentController::class, 'toggleLegalHold'])->name('documents.legal-hold.toggle');

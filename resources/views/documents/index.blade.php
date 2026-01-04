@@ -88,7 +88,7 @@
             </div>
             <div class="lg:col-span-6 flex justify-end space-x-2">
                 <x-secondary-button type="submit">Filter</x-secondary-button>
-                <a href="{{ route('documents.index') }}" class="inline-flex items-center px-4 py-2 rounded-md bg-gray-200 text-gray-800 text-xs uppercase tracking-widest">Reset</a>
+                <a href="{{ request()->routeIs('archive.index') ? route('archive.index') : route('documents.index') }}" class="inline-flex items-center px-4 py-2 rounded-md bg-gray-200 text-gray-800 text-xs uppercase tracking-widest">Reset</a>
             </div>
         </form>
     </div>
@@ -150,6 +150,19 @@
                                 @if($current)
                                     <a href="{{ route('files.preview', $current) }}" target="_blank" class="text-orc-teal hover:underline">Preview</a>
                                     <a href="{{ route('files.download', $current) }}" class="text-orc-gold hover:underline">Download</a>
+                                @endif
+                                @if(auth()->user() && method_exists(auth()->user(), 'isAdmin') && auth()->user()->isAdmin())
+                                    @if(!$d->archived_at && !$d->disposed_at)
+                                        <form method="POST" action="{{ route('documents.archive', $d) }}" class="inline">
+                                            @csrf
+                                            <button type="submit" class="text-red-600 hover:underline" onclick="return confirm('Archive this document?');">Archive</button>
+                                        </form>
+                                    @elseif($d->archived_at)
+                                        <form method="POST" action="{{ route('documents.unarchive', $d) }}" class="inline">
+                                            @csrf
+                                            <button type="submit" class="text-gray-600 hover:underline" onclick="return confirm('Unarchive this document?');">Unarchive</button>
+                                        </form>
+                                    @endif
                                 @endif
                             </td>
                         </tr>

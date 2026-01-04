@@ -318,8 +318,13 @@ class DocumentController extends Controller
         $user = $request->user();
 
         $query = Document::query()
-            ->with(['classification','type','originUnit','files' => function($q){ $q->where('is_current', true); }])
-            ->whereNotNull('archived_at');
+            ->with(['classification','type','originUnit','files' => function($q){ $q->where('is_current', true); }]);
+
+        // For non-admins, the Archive view lists only archived documents.
+        // Admins can see all documents here to allow manual archiving.
+        if (!$user->isAdmin()) {
+            $query->whereNotNull('archived_at');
+        }
 
         if (!$user->isAdmin()) {
             $query->whereHas('classification', function($w) use ($user) {
@@ -345,6 +350,57 @@ class DocumentController extends Controller
             'units' => OrganizationUnit::orderBy('name')->get(),
             'savedSearches' => collect(),
         ]);
+    }
+
+    public function markArchived(Document $document, Request $request): RedirectResponse
+    {
+        $this->authorize('admin');
+        if ($document->disposed_at) {
+            return back()->withErrors(['archive' => 'Document has been disposed and cannot be archived.']);
+        }
+        if ($document->legal_hold) {
+            return back()->withErrors(['archive' => 'Document is on legal hold and cannot be archived.']);
+        }
+        if ($document->archived_at) {
+            return back()->with('status', 'Document already archived.');
+        }
+        $document->archived_at = now();
+        $document->status = 'archived';
+        $document->save();
+        ActivityLog::create([
+            'user_id' => $request->user()->id,
+            'action' => 'document.archived',
+            'subject_type' => Document::class,
+            'subject_id' => $document->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+        return back()->with('status', 'Document archived.');
+    }
+
+    public function unarchive(Document $document, Request $request): RedirectResponse
+    {
+        $this->authorize('admin');
+        if ($document->disposed_at) {
+            return back()->withErrors(['archive' => 'Document has been disposed and cannot be unarchived.']);
+        }
+        if (!$document->archived_at) {
+            return back()->with('status', 'Document is not archived.');
+        }
+        $document->archived_at = null;
+        if ($document->status === 'archived') {
+            $document->status = 'approved';
+        }
+        $document->save();
+        ActivityLog::create([
+            'user_id' => $request->user()->id,
+            'action' => 'document.unarchived',
+            'subject_type' => Document::class,
+            'subject_id' => $document->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+        return back()->with('status', 'Document unarchived.');
     }
 
     public function store(Request $request): RedirectResponse
